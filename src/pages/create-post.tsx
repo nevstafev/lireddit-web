@@ -6,6 +6,8 @@ import { InputField } from '../components/InputField';
 import { Layout } from '../components/Layout';
 import { useCreatePostMutation } from '../generated/graphql';
 import { useIsAuth } from '../utils/useIsAuth';
+import { withUrqlClient } from 'next-urql';
+import { createUrqlClient } from '../utils/createUrqlClient';
 
 const CreatePost: React.FC<{}> = () => {
   const [, createPost] = useCreatePostMutation();
@@ -48,4 +50,4 @@ const CreatePost: React.FC<{}> = () => {
   );
 };
 
-export default CreatePost;
+export default withUrqlClient(createUrqlClient)(CreatePost);

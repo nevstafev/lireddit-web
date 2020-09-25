@@ -1,15 +1,20 @@
+import { cacheExchange, Resolver } from '@urql/exchange-graphcache';
+import Router from 'next/router';
 import {
-  MeDocument,
+  dedupExchange,
+  Exchange,
+  fetchExchange,
+  stringifyVariables,
+} from 'urql';
+import { pipe, tap } from 'wonka';
+import {
   LoginMutation,
+  LogoutMutation,
+  MeDocument,
   MeQuery,
   RegisterMutation,
-  LogoutMutation,
 } from '../generated/graphql';
-import { dedupExchange, fetchExchange, Exchange } from 'urql';
-import { cacheExchange } from '@urql/exchange-graphcache';
 import { betterUpdateQuery } from './betterUpdateQuery';
-import Router from 'next/router';
-import { pipe, tap } from 'wonka';
 
 const errorExchange: Exchange = ({ forward }) => (ops$) => {
   return pipe(
@@ -24,6 +29,42 @@ const errorExchange: Exchange = ({ forward }) => (ops$) => {
   );
 };
 
+const cursorPagination = (): Resolver => {
+  return (_parent, fieldArgs, cache, info) => {
+    const { parentKey: entityKey, fieldName } = info;
+
+    const allFields = cache.inspectFields(entityKey);
+
+    const fieldInfos = allFields.filter((info) => info.fieldName === fieldName);
+    const size = fieldInfos.length;
+    if (size === 0) {
+      return undefined;
+    }
+
+    const isItInTheCache = cache.resolve(
+      cache.resolveFieldByKey(
+        entityKey,
+        `${fieldName}(${stringifyVariables(fieldArgs)})`
+      ) as string,
+      'posts'
+    );
+    info.partial = !isItInTheCache;
+    const result: string[] = [];
+    let hasMore = true;
+    fieldInfos.forEach((fi) => {
+      const key = cache.resolveFieldByKey(entityKey, fi.fieldKey) as string;
+      const data = cache.resolve(key, 'posts') as string[];
+      const hasMoreValue = cache.resolve(key, 'hasMore') as boolean;
+      if (!hasMoreValue) {
+        hasMore = hasMoreValue;
+      }
+      result.push(...data);
+    });
+
+    return { __typename: 'PaginatedPosts', posts: result, hasMore };
+  };
+};
+
 export const createUrqlClient = (ssrExchange: any) => ({
   url: 'http://localhost:4000/graphql',
   fetchOptions: {
@@ -32,6 +73,14 @@ export const createUrqlClient = (ssrExchange: any) => ({
   exchanges: [
     dedupExchange,
     cacheExchange({
+      keys: {
+        PaginatedPosts: () => null,
+      },
+      resolvers: {
+        Query: {
+          posts: cursorPagination(),
+        },
+      },
       updates: {
         Mutation: {
           login: (_result, args, cache, info) => {
@@ -88,7 +137,7 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
     }),
     errorExchange,
-    fetchExchange,
     ssrExchange,
+    fetchExchange,
   ],
 });
