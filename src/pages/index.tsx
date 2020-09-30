@@ -11,10 +11,15 @@ import {
 import { withUrqlClient } from 'next-urql';
 import NextLink from 'next/link';
 import { Layout } from '../components/Layout';
-import { usePostsQuery } from '../generated/graphql';
+import {
+  useDeletePostMutation,
+  useMeQuery,
+  usePostsQuery,
+} from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 import { useState } from 'react';
 import UpdootSection from '../components/UpdootSection';
+import EditDeletePostButton from '../components/EditDeletePostButtons';
 
 const Index = () => {
   const [variables, setVariables] = useState({
@@ -29,28 +34,36 @@ const Index = () => {
 
   return (
     <Layout>
-      <Flex>
-        <Heading>LiReddit</Heading>
-        <NextLink href="/create-post">
-          <Link ml="auto">create post</Link>
-        </NextLink>
-      </Flex>
       {!data && fetching ? (
         <div>Loadig...</div>
       ) : (
         <Stack spacing={8}>
-          {data!.posts.posts.map((p) => (
-            <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
-              <Flex direction="column" alignItems="center" mr={4}>
-                <UpdootSection post={p} />
+          {data!.posts.posts.map((p) =>
+            !p ? null : (
+              <Flex key={p.id} p={5} shadow="md" borderWidth="1px">
+                <Flex direction="column" alignItems="center" mr={4}>
+                  <UpdootSection post={p} />
+                </Flex>
+                <Box flex={1}>
+                  <NextLink href="/post/[id]" as={`/post/${p.id}`}>
+                    <Link>
+                      <Heading fontSize="xl">{p.title}</Heading>
+                    </Link>
+                  </NextLink>
+                  <Text>posted by {p.creator.username}</Text>
+                  <Flex align="center">
+                    <Text mt={4}>{p.textSnippet}</Text>
+                    <Box ml="auto">
+                      <EditDeletePostButton
+                        id={p.id}
+                        creatorId={p.creator.id}
+                      />
+                    </Box>
+                  </Flex>
+                </Box>
               </Flex>
-              <Box>
-                <Heading fontSize="xl">{p.title}</Heading>
-                <Text>posted by {p.creator.username}</Text>
-                <Text mt={4}>{p.textSnippet}</Text>
-              </Box>
-            </Flex>
-          ))}
+            )
+          )}
         </Stack>
       )}
       {data && data.posts.hasMore ? (
