@@ -1,5 +1,6 @@
 import { CSSReset, ThemeProvider } from '@chakra-ui/core';
 import theme from '../theme';
+import { withApollo } from '../utils/withApollo';
 
 function MyApp({ Component, pageProps }: any) {
   return (
@@ -10,4 +11,4 @@ function MyApp({ Component, pageProps }: any) {
   );
 }
 
-export default MyApp;
+export default withApollo({ ssr: true })(MyApp);
