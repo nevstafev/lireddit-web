@@ -3,16 +3,11 @@ import NextLink from 'next/link';
 import EditDeletePostButton from '../components/EditDeletePostButtons';
 import { Layout } from '../components/Layout';
 import UpdootSection from '../components/UpdootSection';
-import {
-  Post,
-  PostQuery,
-  PostsQuery,
-  usePostsQuery,
-} from '../generated/graphql';
+import { usePostsQuery } from '../generated/graphql';
 import { withApollo } from '../utils/withApollo';
 
 const Index = () => {
-  const { data, error, loading, fetchMore, variables } = usePostsQuery({
+  const { data, loading, fetchMore, variables } = usePostsQuery({
     variables: {
       limit: 10,
       cursor: null as null | string,
